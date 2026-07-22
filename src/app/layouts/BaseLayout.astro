@@ -1,26 +1,106 @@
 ---
 import '../styles/global.css';
 import Footer from '../../widgets/footer/Footer.astro';
-interface Props{title?:string;description?:string;image?:string;pageClass?:string;noindex?:boolean}
-const {title='Image Resizer and Compressor',description='Resize and compress images online in your browser. Preview the result, control dimensions and file size, then download without uploading your image.',image='/icon-cropped.png',pageClass='',noindex=false}=Astro.props;
-const canonical=new URL(Astro.url.pathname,Astro.site??Astro.url);
-const social=new URL(image,Astro.site??Astro.url);
+interface Props {
+	title?: string;
+	description?: string;
+	image?: string;
+	pageClass?: string;
+	noindex?: boolean;
+}
+const {
+	title = 'Image Resizer and Compressor',
+	description = 'Resize and compress images online in your browser. Preview the result, control dimensions and file size, then download without uploading your image.',
+	image = '/icon-cropped.png',
+	pageClass = '',
+	noindex = false,
+} = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+const social = new URL(image, Astro.site ?? Astro.url);
 ---
+
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <meta name="description" content={description}/>{noindex&&<meta name="robots" content="noindex,follow"/>}
-    <link rel="canonical" href={canonical}/><link rel="icon" type="image/png" href="/icon-cropped.png"/><meta name="theme-color" content="#f7f5f0"/>
-    <meta property="og:title" content={title}/><meta property="og:description" content={description}/><meta property="og:type" content="website"/><meta property="og:url" content={canonical}/><meta property="og:image" content={social}/>
-    <meta name="twitter:card" content="summary"/><meta name="twitter:title" content={title}/><meta name="twitter:description" content={description}/><title>{title}</title>
-  </head>
-  <body class={pageClass}>
-    <a class="skip-link" href="#main">Skip to content</a>
-    <header class="site-header">
-      <a class="brand" href="/"><img src="/icon-cropped.png" alt="" width="38" height="38"/><span>Image Resizer</span></a>
-      <nav class="nav" aria-label="Main navigation"><a href="/tool/batch-resize/">Batch resize</a><a href="/compress-image/">Compress Image</a><a href="/blog/">Guides</a>{pageClass==='blog-page'&&<a href="/blog/rss.xml">RSS</a>}</nav>
-    </header>
-    <main id="main"><slot/></main><Footer/>
-  </body>
+<html lang='en'>
+	<head>
+		<meta charset='utf-8' /><meta
+			name='viewport'
+			content='width=device-width, initial-scale=1'
+		/>
+		<meta
+			name='description'
+			content={description}
+		/>{
+			noindex && (
+				<meta
+					name='robots'
+					content='noindex,follow'
+				/>
+			)
+		}
+		<link
+			rel='canonical'
+			href={canonical}
+		/><link
+			rel='icon'
+			type='image/png'
+			href='/icon-cropped.png'
+		/><meta
+			name='theme-color'
+			content='#f7f5f0'
+		/>
+		<meta
+			property='og:title'
+			content={title}
+		/><meta
+			property='og:description'
+			content={description}
+		/><meta
+			property='og:type'
+			content='website'
+		/><meta
+			property='og:url'
+			content={canonical}
+		/><meta
+			property='og:image'
+			content={social}
+		/>
+		<meta
+			name='twitter:card'
+			content='summary'
+		/><meta
+			name='twitter:title'
+			content={title}
+		/><meta
+			name='twitter:description'
+			content={description}
+		/><title>{title}</title>
+	</head>
+	<body class={pageClass}>
+		<a
+			class='skip-link'
+			href='#main'
+			>Skip to content</a
+		>
+		<header class='site-header'>
+			<a
+				class='brand'
+				href='/'
+				><img
+					src='/icon-cropped.png'
+					alt=''
+					width='38'
+					height='38'
+				/><span>Image Resizer</span></a
+			>
+			<nav
+				class='nav'
+				aria-label='Main navigation'
+				><a href='/tool/batch-resize/'>Batch resize</a><a href='/compress-image/'>Compress Image</a
+				><a href='/blog/'>Guides</a>{
+					pageClass === 'blog-page' && <a href='/blog/rss.xml'>RSS</a>
+				}</nav
+			>
+		</header>
+		<main id='main'><slot /></main><Footer />
+	</body>
 </html>
