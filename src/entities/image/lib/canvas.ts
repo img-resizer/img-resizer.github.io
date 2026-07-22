@@ -1,1 +1,1 @@
-export {processImage,readImageMetadata} from '../../../../../packages/image-core/index.js';
+export { processImage, readImageMetadata } from './image-core';
