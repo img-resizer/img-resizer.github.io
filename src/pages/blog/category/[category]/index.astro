@@ -1,0 +1,5 @@
+---
+import { getCollection } from 'astro:content'; import BaseLayout from '../../../../app/layouts/BaseLayout.astro'; import PostGrid from '../../../../widgets/blog-preview/PostGrid.astro';
+export async function getStaticPaths(){const posts=await getCollection('blog');return [...new Set(posts.map(p=>p.data.category))].map(category=>({params:{category},props:{category,posts:posts.filter(p=>p.data.category===category)}}))} const {category,posts}=Astro.props;
+---
+<BaseLayout title={`${category} image guides | Resizer`}><section class="intro"><h1>{category} guides</h1></section><PostGrid {posts}/></BaseLayout>

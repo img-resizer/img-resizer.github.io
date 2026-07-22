@@ -1,0 +1,6 @@
+---
+import { getCollection, render } from 'astro:content'; import BaseLayout from '../../app/layouts/BaseLayout.astro';
+export async function getStaticPaths(){return (await getCollection('blog')).map(post=>({params:{slug:post.id.replace(/\.(md|mdx)$/,'')},props:{post}}))}
+const {post}=Astro.props; const {Content}=await render(post);
+---
+<BaseLayout title={`${post.data.title} | Resizer`} description={post.data.description}><article class="section prose post"><a href="/blog">← All guides</a><h1>{post.data.title}</h1><p class="byline">By {post.data.author} · {post.data.pubDate.toLocaleDateString('en',{dateStyle:'long'})}</p><Content/></article></BaseLayout><style>.post{margin-inline:auto}.post h1{margin:1rem 0}.byline{margin-bottom:2rem}</style>

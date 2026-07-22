@@ -1,0 +1,42 @@
+---
+import BaseLayout from '../../app/layouts/BaseLayout.astro';
+import UploaderHero from '../../widgets/uploader-hero/UploaderHero.astro';
+import SeoLinksGrid from '../../widgets/seo-links-grid/SeoLinksGrid.astro';
+import {presets} from '../../entities/preset/model/presets';
+export function getStaticPaths(){return presets.map(preset=>({params:{preset:preset.slug},props:{preset}}))}
+const {preset}=Astro.props;
+const title=`${preset.title} | Private Image Tool`;
+const description=`${preset.description} Preview, resize, and compress the image locally without uploading it.`;
+const target=preset.width&&preset.height?`${preset.width} by ${preset.height} pixels`:preset.maxSizeKB?`${preset.maxSizeKB>=1024?preset.maxSizeKB/1024+' MB':preset.maxSizeKB+' KB'}`:'the selected output settings';
+---
+<BaseLayout {title} {description}>
+  <UploaderHero {preset}/>
+  <section class="intro">
+    <div><span class="eyebrow">Preset ready</span><h1>{preset.title}</h1></div>
+    <p class="intro-copy"><strong>The output settings are already prepared.</strong>{preset.description} Preview the source, make any adjustment you need, and download the result without sending the image away.</p>
+  </section>
+  <section class="preset-summary">
+    <div><span>Target</span><strong>{target}</strong></div><div><span>Processing</span><strong>Inside your browser</strong></div><div><span>Supported input</span><strong>JPEG, PNG, WebP</strong></div>
+  </section>
+  <section class="section guide">
+    <div><span class="eyebrow">Using this preset</span><h2 class="section-title">A direct way to {preset.title.toLowerCase()}</h2></div>
+    <div class="guide-copy">
+      <p>{preset.title} begins with the settings shown in the workspace above. Choose an image and check the preview before processing. The image resizer keeps the controls visible, so a different width, height, format, or file size can be entered before the final download.</p>
+      <p>The selected image remains on your device while the browser draws the new pixels. This is useful when the source contains personal details, client work, unpublished products, or documents that do not belong on a third-party server.</p>
+      <h3>What happens to image quality?</h3><p>Resizing changes the number of pixels. Compression changes how those pixels are encoded. JPEG and WebP can trade a small amount of visual detail for a lighter file, while PNG is intended for lossless graphics and transparency.</p>
+      <h3>When should you change the preset?</h3><p>Keep {target} when the receiving platform gives that exact requirement. If the destination only suggests a size, preserve the image proportions and avoid enlarging a small original more than necessary.</p>
+      <h3>Why use browser-based processing?</h3><p>A browser-based image tool starts immediately and avoids upload time. It also reduces data sharing. Very large batches may work better when processed in smaller groups.</p>
+    </div>
+  </section>
+  <SeoLinksGrid/>
+  <section class="section faq">
+    <div><span class="eyebrow">Questions answered</span><h2 class="section-title">About {preset.title.toLowerCase()}</h2></div>
+    <div>
+      <details open><summary>Is the selected image uploaded?</summary><p>No. The image is decoded, resized, and compressed by browser APIs on your device.</p></details>
+      <details><summary>Can I use a different format?</summary><p>Yes. Choose JPEG for compatibility, WebP for efficient delivery, or PNG when transparency and lossless graphics matter.</p></details>
+      <details><summary>Will the result always hit an exact file size?</summary><p>The compressor aims to stay below the selected maximum. Extremely low limits can require smaller dimensions or visible quality reduction.</p></details>
+      <details><summary>Does the image resizer work on mobile?</summary><p>Current mobile browsers support the required image and canvas APIs. Process large photographs in smaller groups on older devices.</p></details>
+    </div>
+  </section>
+</BaseLayout>
+<style>.preset-summary{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:var(--radius);background:#fff}.preset-summary div{display:grid;gap:.2rem;padding:1.2rem 1.4rem}.preset-summary div+div{border-left:1px solid var(--line)}.preset-summary span{color:var(--ink-soft);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}.guide{display:grid;grid-template-columns:.7fr 1.3fr;gap:4rem}.guide-copy p{color:var(--ink-soft)}.guide-copy p+p{margin-top:1rem}.guide-copy h3{margin:2rem 0 .5rem;font-size:1.1rem}.faq{display:grid;grid-template-columns:.65fr 1.35fr;gap:4rem}.faq>div:last-child{border-top:1px solid var(--line)}details{padding:1.1rem 0;border-bottom:1px solid var(--line)}summary{font-weight:800;cursor:pointer}details p{padding:.7rem 2rem 0 0;color:var(--ink-soft)}@media(max-width:760px){.preset-summary{grid-template-columns:1fr}.preset-summary div+div{border-left:0;border-top:1px solid var(--line)}.guide,.faq{grid-template-columns:1fr;gap:1.5rem}}</style>

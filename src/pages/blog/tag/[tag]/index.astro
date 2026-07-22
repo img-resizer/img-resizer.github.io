@@ -1,0 +1,5 @@
+---
+import { getCollection } from 'astro:content'; import BaseLayout from '../../../../app/layouts/BaseLayout.astro'; import PostGrid from '../../../../widgets/blog-preview/PostGrid.astro';
+export async function getStaticPaths(){const posts=await getCollection('blog');return [...new Set(posts.flatMap(p=>p.data.tags))].map(tag=>({params:{tag},props:{tag,posts:posts.filter(p=>p.data.tags.includes(tag))}}))} const {tag,posts}=Astro.props;
+---
+<BaseLayout title={`#${tag} image guides | Resizer`}><section class="intro"><h1>#{tag}</h1></section><PostGrid {posts}/></BaseLayout>

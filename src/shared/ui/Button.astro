@@ -1,0 +1,6 @@
+---
+interface Props { type?: 'button'|'submit'; disabled?: boolean; id?: string; }
+const { type='button', disabled=false, id } = Astro.props;
+---
+<button {type} {disabled} {id} class="button"><slot /></button>
+<style>.button{border:0;border-radius:.75rem;background:var(--primary);color:#fff;font-weight:750;padding:.8rem 1.15rem;box-shadow:0 6px 16px #4f46e533}.button:hover{background:var(--primary-dark)}.button:disabled{opacity:.45;cursor:not-allowed}.button:focus-visible{outline:3px solid #a5b4fc;outline-offset:2px}</style>
