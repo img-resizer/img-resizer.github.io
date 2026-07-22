@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://image-resizer.github.io/sitemap-index.xml
+Sitemap: https://img-resizer.github.io/sitemap-index.xml
