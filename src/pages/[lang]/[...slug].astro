@@ -1,0 +1,332 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../app/layouts/BaseLayout.astro';
+import UploaderHero from '../../widgets/uploader-hero/UploaderHero.astro';
+import BreakpointGenerator from '../../widgets/breakpoint-generator/BreakpointGenerator.astro';
+import SeoLinksGrid from '../../widgets/seo-links-grid/SeoLinksGrid.astro';
+import PostGrid from '../../widgets/blog-preview/PostGrid.astro';
+import LegalPage from '../../widgets/legal-page/LegalPage.astro';
+import { getPreset, presets } from '../../entities/preset/model/presets';
+import type { Preset } from '../../entities/preset/model/types';
+import {
+	getDictionary,
+	isLocale,
+	nonDefaultLocales,
+	type Locale,
+} from '../../shared/i18n';
+
+export function getStaticPaths() {
+	const staticRoutes = [
+		undefined,
+		'compress-image',
+		'image-breakpoint-generator',
+		'plugins',
+		'blog',
+		'contact',
+		'privacy-policy',
+		'terms-of-use',
+	] as const;
+
+	return nonDefaultLocales.flatMap((lang) => [
+		...staticRoutes.map((slug) => ({ params: { lang, slug } })),
+		...presets.map((preset) => ({ params: { lang, slug: `tool/${preset.slug}` } })),
+	]);
+}
+
+const rawLang = Astro.params.lang;
+const locale: Locale = isLocale(rawLang) ? rawLang : 'en';
+const dictionary = getDictionary(locale);
+const page = dictionary.pages;
+const route = Astro.params.slug ?? '';
+const posts =
+	route === 'blog'
+		? (await getCollection('blog')).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+		: [];
+
+const toolSlug = route.startsWith('tool/') ? route.replace('tool/', '') : '';
+const selectedPreset = toolSlug ? getPreset(toolSlug) : undefined;
+const compressionPreset: Preset = {
+	slug: 'compress-image',
+	title: page.compressH1,
+	description: page.compressDescription,
+	category: 'utility',
+	format: 'image/jpeg',
+};
+---
+
+{
+	route === '' && (
+		<BaseLayout title={page.homeTitle} description={page.homeDescription} locale={locale}>
+			<UploaderHero locale={locale} />
+			<section class="intro">
+				<div>
+					<span class="eyebrow">{page.homeEyebrow}</span>
+					<h1>{page.homeH1}</h1>
+				</div>
+				<p class="intro-copy">
+					<strong>{page.homeStrong}</strong>
+					{page.homeCopy}
+				</p>
+			</section>
+			<SeoLinksGrid />
+			<section class="section localized-copy">
+				<div>
+					<span class="eyebrow">{page.homeEyebrow}</span>
+					<h2 class="section-title">{page.homeH1}</h2>
+				</div>
+				<p>
+					{page.homeDescription} The tool keeps the workflow simple: choose a source image, preview
+					it, set the output, and download the finished file from this browser session.
+				</p>
+			</section>
+		</BaseLayout>
+	)
+}
+
+{
+	route === 'compress-image' && (
+		<BaseLayout title={page.compressTitle} description={page.compressDescription} locale={locale}>
+			<UploaderHero preset={compressionPreset} mode="compress" locale={locale} />
+			<section class="intro">
+				<div>
+					<span class="eyebrow">{page.compressEyebrow}</span>
+					<h1>{page.compressH1}</h1>
+				</div>
+				<p class="intro-copy">
+					<strong>{page.compressStrong}</strong>
+					{page.compressCopy}
+				</p>
+			</section>
+			<section class="section localized-copy">
+				<div>
+					<span class="eyebrow">{page.compressEyebrow}</span>
+					<h2 class="section-title">{page.compressH1}</h2>
+				</div>
+				<p>
+					{page.compressDescription} The image is decoded and compressed locally. You can choose a
+					format, adjust quality, and download a smaller file without sending the source to a server.
+				</p>
+			</section>
+			<SeoLinksGrid />
+		</BaseLayout>
+	)
+}
+
+{
+	route === 'image-breakpoint-generator' && (
+		<BaseLayout title={page.breakpointTitle} description={page.breakpointDescription} locale={locale}>
+			<section class="intro">
+				<div>
+					<span class="eyebrow">{page.breakpointEyebrow}</span>
+					<h1>{page.breakpointH1}</h1>
+				</div>
+				<p class="intro-copy">
+					<strong>{page.breakpointStrong}</strong>
+					{page.breakpointCopy}
+				</p>
+			</section>
+			<BreakpointGenerator locale={locale} />
+			<section class="section localized-copy">
+				<div>
+					<span class="eyebrow">{page.breakpointEyebrow}</span>
+					<h2 class="section-title">{page.breakpointH1}</h2>
+				</div>
+				<p>
+					{page.breakpointDescription} Generate multiple widths for responsive layouts and copy a
+					srcset snippet when the files are ready.
+				</p>
+			</section>
+		</BaseLayout>
+	)
+}
+
+{
+	route === 'plugins' && (
+		<BaseLayout title={page.pluginsTitle} description={page.pluginsDescription} locale={locale}>
+			<section class="intro">
+				<div>
+					<span class="eyebrow">{page.pluginsEyebrow}</span>
+					<h1>{page.pluginsH1}</h1>
+				</div>
+				<p class="intro-copy">
+					<strong>{page.pluginsStrong}</strong>
+					{page.pluginsCopy}
+				</p>
+			</section>
+			<section class="localized-cards">
+				<article>
+					<h2>Chrome</h2>
+					<p>{page.pluginsDescription}</p>
+					<a href="https://chromewebstore.google.com/detail/image-resizer/plkabmchgagilcldimddofngmlapmmng" target="_blank" rel="noopener noreferrer">Chrome Web Store</a>
+				</article>
+				<article>
+					<h2>Firefox</h2>
+					<p>{page.pluginsDescription}</p>
+					<a href="https://addons.mozilla.org/en-US/firefox/addon/img-resizer/" target="_blank" rel="noopener noreferrer">Firefox Add-ons</a>
+				</article>
+				<article>
+					<h2>Obsidian</h2>
+					<p>{page.pluginsCopy}</p>
+					<a href="https://community.obsidian.md/plugins/local-image-resizer" target="_blank" rel="noopener noreferrer">Obsidian Community plugin</a>
+				</article>
+			</section>
+		</BaseLayout>
+	)
+}
+
+{
+	route === 'blog' && (
+		<BaseLayout title={page.blogTitle} description={page.blogDescription} pageClass="blog-page" locale={locale}>
+			<section class="blog-hero">
+				<div>
+					<span class="eyebrow">{page.blogEyebrow}</span>
+					<h1>{page.blogH1}</h1>
+				</div>
+				<div>
+					<p>{page.blogCopy}</p>
+					<a class="rss" href="/blog/rss.xml">{page.blogRss}</a>
+				</div>
+			</section>
+			<PostGrid posts={posts} />
+		</BaseLayout>
+	)
+}
+
+{
+	route === 'contact' && (
+		<LegalPage title={page.contactTitle} description={page.contactDescription} eyebrow={page.contactEyebrow} locale={locale}>
+			<span slot="heading">{page.contactH1}</span>
+			<h2>{page.contactH1}</h2>
+			<p>{page.contactDescription}</p>
+			<p>Use the project contact details that will be published on this page. Do not send private or sensitive images as examples.</p>
+			<p>Contact us via <a href="https://github.com/jstoolsspace">GitHub</a>.</p>
+		</LegalPage>
+	)
+}
+
+{
+	route === 'privacy-policy' && (
+		<LegalPage title={page.privacyTitle} description={page.privacyDescription} eyebrow={page.privacyEyebrow} locale={locale}>
+			<span slot="heading">{page.privacyH1}</span>
+			<h2>{page.privacyH1}</h2>
+			<p>{page.privacyDescription}</p>
+			<p>Image files are processed locally in the browser or app. They are not intentionally uploaded to an Image Resizer server for resizing, compression, or export.</p>
+			<p>If analytics, accounts, cloud storage, or advertising features are added later, this policy should be updated before release.</p>
+		</LegalPage>
+	)
+}
+
+{
+	route === 'terms-of-use' && (
+		<LegalPage title={page.termsTitle} description={page.termsDescription} eyebrow={page.termsEyebrow} locale={locale}>
+			<span slot="heading">{page.termsH1}</span>
+			<h2>{page.termsH1}</h2>
+			<p>{page.termsDescription}</p>
+			<p>You may use the service to resize and compress images that you own or are authorized to process. You are responsible for checking the downloaded result.</p>
+			<p>The service is provided as available and file size results depend on image content, format, dimensions, and browser support.</p>
+		</LegalPage>
+	)
+}
+
+{
+	selectedPreset && (
+		<BaseLayout title={`${selectedPreset.title} | Image Resizer`} description={selectedPreset.description} locale={locale}>
+			<UploaderHero preset={selectedPreset} locale={locale} />
+			<section class="intro">
+				<div>
+					<span class="eyebrow">Image tool</span>
+					<h1>{selectedPreset.title}</h1>
+				</div>
+				<p class="intro-copy">
+					<strong>{selectedPreset.description}</strong>
+					{page.homeDescription}
+				</p>
+			</section>
+			<SeoLinksGrid />
+		</BaseLayout>
+	)
+}
+
+<style>
+	.localized-copy {
+		display: grid;
+		grid-template-columns: 0.72fr 1.28fr;
+		gap: 4rem;
+		padding: 3rem;
+		border-radius: var(--radius-lg);
+		background: var(--ink);
+		color: #fff;
+	}
+
+	.localized-copy .eyebrow {
+		color: var(--lime);
+	}
+
+	.localized-copy p {
+		color: #c6ccda;
+		font-size: 1.05rem;
+	}
+
+	.localized-cards {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+		margin: var(--space-5) 0 var(--space-7);
+	}
+
+	.localized-cards article {
+		display: grid;
+		gap: 0.8rem;
+		padding: 1.5rem;
+		border: 1px solid var(--line);
+		border-radius: var(--radius);
+		background: #fff;
+		box-shadow: var(--shadow-sm);
+	}
+
+	.localized-cards h2 {
+		font-size: 1.5rem;
+	}
+
+	.localized-cards p {
+		color: var(--ink-soft);
+	}
+
+	.localized-cards a,
+	.rss {
+		color: var(--blue);
+		font-weight: 800;
+		text-decoration: none;
+	}
+
+	.blog-hero {
+		display: grid;
+		grid-template-columns: 1.2fr 0.8fr;
+		gap: 4rem;
+		align-items: end;
+		margin: 4rem 0;
+	}
+
+	.blog-hero p {
+		color: var(--ink-soft);
+		font-size: 1.08rem;
+	}
+
+	.rss {
+		display: inline-flex;
+		margin-top: 1rem;
+	}
+
+	@media (max-width: 780px) {
+		.localized-copy,
+		.localized-cards,
+		.blog-hero {
+			grid-template-columns: 1fr;
+		}
+
+		.localized-copy {
+			gap: 2rem;
+			padding: 1.6rem;
+		}
+	}
+</style>

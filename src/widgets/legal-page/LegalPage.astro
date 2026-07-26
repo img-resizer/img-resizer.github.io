@@ -1,9 +1,10 @@
 ---
 import BaseLayout from '../../app/layouts/BaseLayout.astro';
-interface Props{title:string;description:string;eyebrow:string;updated?:string}
-const {title,description,eyebrow,updated='July 22, 2026'}=Astro.props;
+import type { Locale } from '../../shared/i18n';
+interface Props{title:string;description:string;eyebrow:string;updated?:string;locale?:Locale}
+const {title,description,eyebrow,updated='July 22, 2026',locale}=Astro.props;
 ---
-<BaseLayout {title} {description}>
+<BaseLayout {title} {description} {locale}>
   <article class="legal-page">
     <header><span class="eyebrow">{eyebrow}</span><h1><slot name="heading"/></h1><p>{description}</p><small>Last updated: {updated}</small></header>
     <div class="legal-body"><slot/></div>

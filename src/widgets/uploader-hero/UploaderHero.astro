@@ -1,9 +1,11 @@
 ---
 import type { Preset } from '../../entities/preset/model/types';
-const {preset,mode='resize'}=Astro.props as {preset?:Preset;mode?:'resize'|'compress'};
+import { defaultLocale, getDictionary, type Locale } from '../../shared/i18n';
+const {preset,mode='resize',locale=defaultLocale}=Astro.props as {preset?:Preset;mode?:'resize'|'compress';locale?:Locale};
 const format=preset?.format??'image/jpeg';
 const isBatch=preset?.utility==='batch';
 const isCompression=mode==='compress';
+const copy=getDictionary(locale).tool;
 ---
 <section class="workspace" data-tool data-batch={isBatch?'true':'false'} data-mode={mode} data-width={preset?.width??''} data-height={preset?.height??''} data-format={format} data-max-size={preset?.maxSizeKB??''} aria-label={isCompression?'Image compression workspace':'Image resizing workspace'}>
   <div class="workspace-bar"><div><span class="live-dot"></span><strong>Local workspace</strong><span>Nothing is uploaded</span></div><span class="shortcut">JPEG · PNG · WEBP</span></div>
@@ -12,21 +14,21 @@ const isCompression=mode==='compress';
       <label class="dropzone" data-dropzone>
         <input data-file-input type="file" accept="image/jpeg,image/png,image/webp" multiple={isBatch || undefined} />
         <span class="upload-mark" aria-hidden="true"><span>+</span></span>
-        <strong>{isBatch?'Drop images here':'Drop an image here'}</strong><span>or click to browse your device</span><small>{isBatch?'Select up to 20 files at once':'JPEG, PNG, or WebP'}</small>
+        <strong>{isBatch?'Drop images here':copy.drop}</strong><span>{copy.browse}</span><small>{isBatch?'Select up to 20 files at once':copy.formats}</small>
       </label>
-      <div class="preview" data-preview hidden><div class="preview-stage"><img data-preview-image alt="Preview of the selected image" /></div><div class="batch-list" data-batch-list hidden></div><div class="file-row"><div><strong data-file-name></strong><span data-file-meta></span></div><button class="text-button" type="button" data-replace>{isBatch?'Choose other files':'Replace'}</button></div></div>
+      <div class="preview" data-preview hidden><div class="preview-stage"><img data-preview-image alt="Preview of the selected image" /></div><div class="batch-list" data-batch-list hidden></div><div class="file-row"><div><strong data-file-name></strong><span data-file-meta></span></div><button class="text-button" type="button" data-replace>{isBatch?copy.chooseOther:copy.replace}</button></div></div>
     </div>
     <form class="settings" data-settings>
-      <div class="settings-head"><div><span class="step">01</span><h2>Output settings</h2></div><button type="reset" class="text-button">Reset</button></div>
-      <div class="control-pair" hidden={isCompression || undefined}><label>Width<input data-width type="number" inputmode="numeric" min="1" max="12000" placeholder="Auto" value={preset?.width}/><span>px</span></label><span class="dimension-sign">×</span><label>Height<input data-height type="number" inputmode="numeric" min="1" max="12000" placeholder="Auto" value={preset?.height}/><span>px</span></label></div>
-      <label class="ratio-option" hidden={isCompression || undefined}><input data-lock type="checkbox" checked/><span><b>Keep aspect ratio</b><small>Turn this off to set width and height independently.</small></span></label>
-      {isCompression&&<div class="compression-note"><b>Original dimensions preserved</b><small>Compression changes encoding quality, not the crop or canvas size.</small></div>}
-      <label class="field"><span>Output format</span><select data-format><option value="image/jpeg" selected={format==='image/jpeg'}>JPEG, compact and compatible</option><option value="image/webp" selected={format==='image/webp'}>WebP, smaller modern format</option>{!isCompression&&<option value="image/png" selected={format==='image/png'}>PNG, lossless graphics</option>}</select></label>
-      {isCompression&&<label class="field quality-field"><span>Image quality <output data-quality-output>75%</output></span><input data-quality type="range" min="20" max="95" value="75" step="5"/></label>}
-      <label class="field"><span>Maximum file size <small>optional</small></span><div class="input-unit"><input data-max-size type="number" inputmode="numeric" min="1" placeholder="No limit" value={preset?.maxSizeKB}/><b>KB</b></div></label>
-      <div class="result-line"><span>Estimated output</span><strong data-estimate>Choose an image</strong></div>
-      <button class="primary-button" type="submit" disabled data-process><span data-button-label>{isCompression?'Compress and download':'Resize and download'}</span><span aria-hidden="true">↓</span></button>
-      <p class="status" data-status role="status">Your image stays on this device.</p>
+      <div class="settings-head"><div><span class="step">01</span><h2>Output settings</h2></div><button type="reset" class="text-button">{copy.reset}</button></div>
+      <div class="control-pair" hidden={isCompression || undefined}><label>{copy.width}<input data-width type="number" inputmode="numeric" min="1" max="12000" placeholder="Auto" value={preset?.width}/><span>px</span></label><span class="dimension-sign">×</span><label>{copy.height}<input data-height type="number" inputmode="numeric" min="1" max="12000" placeholder="Auto" value={preset?.height}/><span>px</span></label></div>
+      <label class="ratio-option" hidden={isCompression || undefined}><input data-lock type="checkbox" checked/><span><b>{copy.keepRatio}</b><small>{copy.ratioHint}</small></span></label>
+      {isCompression&&<div class="compression-note"><b>{copy.originalDimensions}</b><small>{copy.compressionHint}</small></div>}
+      <label class="field"><span>{copy.format}</span><select data-format><option value="image/jpeg" selected={format==='image/jpeg'}>JPEG, compact and compatible</option><option value="image/webp" selected={format==='image/webp'}>WebP, smaller modern format</option>{!isCompression&&<option value="image/png" selected={format==='image/png'}>PNG, lossless graphics</option>}</select></label>
+      {isCompression&&<label class="field quality-field"><span>{copy.quality} <output data-quality-output>75%</output></span><input data-quality type="range" min="20" max="95" value="75" step="5"/></label>}
+      <label class="field"><span>{copy.maxSize} <small>{copy.optional}</small></span><div class="input-unit"><input data-max-size type="number" inputmode="numeric" min="1" placeholder={copy.noLimit} value={preset?.maxSizeKB}/><b>KB</b></div></label>
+      <div class="result-line"><span>{copy.estimate}</span><strong data-estimate>{copy.statusReady}</strong></div>
+      <button class="primary-button" type="submit" disabled data-process><span data-button-label>{isCompression?copy.compressDownload:copy.resizeDownload}</span><span aria-hidden="true">↓</span></button>
+      <p class="status" data-status role="status">{copy.statusReady}</p>
     </form>
   </div>
 </section>

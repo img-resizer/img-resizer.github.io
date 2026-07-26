@@ -1,0 +1,770 @@
+---
+import { defaultLocale, getDictionary, type Locale } from '../../shared/i18n';
+
+interface Props {
+	locale?: Locale;
+}
+
+const { locale = defaultLocale } = Astro.props;
+const copy = getDictionary(locale).breakpointTool;
+---
+
+<section
+	class="breakpoint-tool"
+	data-breakpoint-tool
+	data-label-start={copy.start}
+	data-label-loaded={copy.loaded}
+	data-label-generating={copy.generating}
+	data-label-download={copy.download}
+	data-label-copy={copy.copyCode}
+	data-label-copied={copy.copied}
+	data-label-failed={copy.failed}
+	aria-label="Image breakpoint generator workspace"
+>
+	<div class="tool-panel">
+		<div class="dropzone" data-dropzone>
+			<input data-file-input type="file" accept="image/jpeg,image/png,image/webp" />
+			<div class="drop-icon" aria-hidden="true">+</div>
+			<h2>{copy.drop}</h2>
+			<p>{copy.browse}</p>
+			<small>{copy.formats}</small>
+		</div>
+
+		<div class="source-preview" data-source-preview hidden>
+			<div class="preview-frame">
+				<img data-preview-image alt="Selected image preview" />
+			</div>
+			<div class="file-row">
+				<div>
+					<strong data-file-name></strong>
+					<span data-file-meta></span>
+				</div>
+				<button class="text-button" type="button" data-replace>{copy.replace}</button>
+			</div>
+		</div>
+	</div>
+
+	<form class="settings-panel" data-settings>
+		<div>
+			<span class="eyebrow">{copy.eyebrow}</span>
+			<h2>{copy.heading}</h2>
+			<p>
+				{copy.copy}
+			</p>
+		</div>
+
+		<div class="control-grid">
+			<label>
+				<span>{copy.min}</span>
+				<input data-min-width type="number" inputmode="numeric" min="64" max="12000" step="1" value="320" />
+				<b>px</b>
+			</label>
+			<label>
+				<span>{copy.max}</span>
+				<input data-max-width type="number" inputmode="numeric" min="64" max="12000" step="1" value="1600" />
+				<b>px</b>
+			</label>
+			<label>
+				<span>{copy.step}</span>
+				<input data-step type="number" inputmode="numeric" min="80" max="1600" step="1" value="320" />
+				<b>px</b>
+			</label>
+			<label>
+				<span>{copy.quality}</span>
+				<input data-quality type="number" inputmode="numeric" min="20" max="95" step="1" value="82" />
+				<b>%</b>
+			</label>
+		</div>
+
+		<label class="field">
+			<span>{copy.format}</span>
+			<select data-format>
+				<option value="image/webp">WebP, smaller modern format</option>
+				<option value="image/jpeg">JPEG, broad compatibility</option>
+				<option value="image/png">PNG, lossless graphics</option>
+			</select>
+		</label>
+
+		<label class="field">
+			<span>{copy.alt}</span>
+			<input data-alt type="text" placeholder={copy.altPlaceholder} />
+		</label>
+
+		<div class="actions">
+			<button class="primary-button" type="submit" data-generate disabled>{copy.generate}</button>
+			<button class="secondary-button" type="reset">{copy.reset}</button>
+		</div>
+		<p class="status" data-status>{copy.start}</p>
+	</form>
+
+	<div class="results-panel" data-results hidden>
+		<div class="results-head">
+			<div>
+				<span class="eyebrow">{copy.resultsEyebrow}</span>
+				<h2>{copy.resultsHeading}</h2>
+			</div>
+			<button class="secondary-button" type="button" data-download-all>{copy.downloadAll}</button>
+		</div>
+		<div class="breakpoint-list" data-breakpoint-list></div>
+		<div class="snippet-card">
+			<div class="snippet-head">
+				<h3>{copy.html}</h3>
+				<button class="copy-button" type="button" data-copy-snippet>{copy.copyCode}</button>
+			</div>
+			<pre><code data-snippet></code></pre>
+		</div>
+	</div>
+</section>
+
+<script>
+	import { processImage } from '../../entities/image/lib/canvas';
+
+	const formatBytes = (bytes: number) => {
+		if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+		const units = ['B', 'KB', 'MB'];
+		const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+		return `${(bytes / 1024 ** index).toFixed(index ? 1 : 0)} ${units[index]}`;
+	};
+
+	const escapeAttribute = (value: string) =>
+		value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+	const buildWidths = (sourceWidth: number, minWidth: number, maxWidth: number, step: number) => {
+		const min = Math.max(64, Math.min(minWidth, sourceWidth));
+		const max = Math.max(min, Math.min(maxWidth, sourceWidth));
+		const gap = Math.max(80, step);
+		const widths: number[] = [];
+
+		for (let width = min; width < max; width += gap) {
+			widths.push(Math.round(width));
+		}
+
+		if (!widths.includes(max)) widths.push(Math.round(max));
+		return [...new Set(widths)].sort((a, b) => a - b);
+	};
+
+	document.querySelectorAll<HTMLElement>('[data-breakpoint-tool]').forEach((root) => {
+		const input = root.querySelector<HTMLInputElement>('[data-file-input]')!;
+		const dropzone = root.querySelector<HTMLElement>('[data-dropzone]')!;
+		const preview = root.querySelector<HTMLElement>('[data-source-preview]')!;
+		const previewImage = root.querySelector<HTMLImageElement>('[data-preview-image]')!;
+		const fileName = root.querySelector<HTMLElement>('[data-file-name]')!;
+		const fileMeta = root.querySelector<HTMLElement>('[data-file-meta]')!;
+		const replace = root.querySelector<HTMLButtonElement>('[data-replace]')!;
+		const form = root.querySelector<HTMLFormElement>('[data-settings]')!;
+		const minWidth = root.querySelector<HTMLInputElement>('[data-min-width]')!;
+		const maxWidth = root.querySelector<HTMLInputElement>('[data-max-width]')!;
+		const step = root.querySelector<HTMLInputElement>('[data-step]')!;
+		const quality = root.querySelector<HTMLInputElement>('[data-quality]')!;
+		const format = root.querySelector<HTMLSelectElement>('[data-format]')!;
+		const alt = root.querySelector<HTMLInputElement>('[data-alt]')!;
+		const generate = root.querySelector<HTMLButtonElement>('[data-generate]')!;
+		const status = root.querySelector<HTMLElement>('[data-status]')!;
+		const results = root.querySelector<HTMLElement>('[data-results]')!;
+		const list = root.querySelector<HTMLElement>('[data-breakpoint-list]')!;
+		const snippet = root.querySelector<HTMLElement>('[data-snippet]')!;
+		const copySnippet = root.querySelector<HTMLButtonElement>('[data-copy-snippet]')!;
+		const downloadAll = root.querySelector<HTMLButtonElement>('[data-download-all]')!;
+		const labels = {
+			start: root.dataset.labelStart || 'Choose an image to begin.',
+			loaded: root.dataset.labelLoaded || 'Image loaded. Adjust widths, then generate breakpoints.',
+			generating: root.dataset.labelGenerating || 'Generating responsive image breakpoints on this device...',
+			download: root.dataset.labelDownload || 'Download',
+			copy: root.dataset.labelCopy || 'Copy code',
+			copied: root.dataset.labelCopied || 'Copied',
+			failed: root.dataset.labelFailed || 'Failed',
+		};
+
+		let sourceFile: File | null = null;
+		let sourceWidth = 0;
+		let sourceHeight = 0;
+		let previewUrl = '';
+		let generated: { width: number; height: number; blob: Blob; url: string; name: string }[] = [];
+
+		const clearGenerated = () => {
+			for (const item of generated) URL.revokeObjectURL(item.url);
+			generated = [];
+			list.replaceChildren();
+			snippet.textContent = '';
+			results.hidden = true;
+		};
+
+		const setSource = async (file: File) => {
+			if (!file.type.startsWith('image/')) {
+				status.textContent = 'Please choose a JPEG, PNG, or WebP image.';
+				return;
+			}
+
+			clearGenerated();
+			sourceFile = file;
+			if (previewUrl) URL.revokeObjectURL(previewUrl);
+			previewUrl = URL.createObjectURL(file);
+			previewImage.src = previewUrl;
+
+			try {
+				const bitmap = await createImageBitmap(file);
+				sourceWidth = bitmap.width;
+				sourceHeight = bitmap.height;
+				bitmap.close();
+			} catch {
+				status.textContent = 'The browser could not read this image.';
+				return;
+			}
+
+			fileName.textContent = file.name;
+			fileMeta.textContent = `${sourceWidth} × ${sourceHeight} · ${formatBytes(file.size)}`;
+			maxWidth.value = String(Math.min(sourceWidth, Number(maxWidth.value) || sourceWidth));
+			dropzone.hidden = true;
+			preview.hidden = false;
+			generate.disabled = false;
+			status.textContent = labels.loaded;
+		};
+
+		const downloadItem = (item: { url: string; name: string }) => {
+			const anchor = document.createElement('a');
+			anchor.href = item.url;
+			anchor.download = item.name;
+			document.body.append(anchor);
+			anchor.click();
+			anchor.remove();
+		};
+
+		const renderResults = () => {
+			const extension = format.value.split('/')[1].replace('jpeg', 'jpg');
+			const baseName = sourceFile?.name.replace(/\.[^.]+$/, '') || 'image';
+			const srcset = generated.map((item) => `${item.name} ${item.width}w`).join(',\n    ');
+			const fallback = generated[generated.length - 1];
+			const escapedAlt = escapeAttribute(alt.value.trim() || 'Responsive image');
+
+			snippet.textContent = `<picture>
+  <img
+    src="${fallback.name}"
+    srcset="${srcset}"
+    sizes="(max-width: 760px) 100vw, 760px"
+    width="${fallback.width}"
+    height="${fallback.height}"
+    alt="${escapedAlt}"
+    loading="lazy"
+    decoding="async">
+</picture>`;
+
+			list.replaceChildren();
+			for (const item of generated) {
+				const row = document.createElement('article');
+				const thumb = document.createElement('img');
+				const details = document.createElement('div');
+				const title = document.createElement('strong');
+				const meta = document.createElement('span');
+				const button = document.createElement('button');
+
+				thumb.src = item.url;
+				thumb.alt = '';
+				title.textContent = `${item.width} px`;
+				meta.textContent = `${item.width} × ${item.height} · ${formatBytes(item.blob.size)} · ${extension.toUpperCase()}`;
+				button.type = 'button';
+				button.textContent = labels.download;
+				button.addEventListener('click', () => downloadItem(item));
+
+				details.append(title, meta);
+				row.append(thumb, details, button);
+				list.append(row);
+			}
+
+			results.hidden = false;
+		};
+
+		for (const name of ['dragenter', 'dragover']) {
+			dropzone.addEventListener(name, (event) => {
+				event.preventDefault();
+				dropzone.classList.add('is-dragging');
+			});
+		}
+
+		for (const name of ['dragleave', 'drop']) {
+			dropzone.addEventListener(name, (event) => {
+				event.preventDefault();
+				dropzone.classList.remove('is-dragging');
+			});
+		}
+
+		dropzone.addEventListener('click', () => input.click());
+		dropzone.addEventListener('drop', (event) => {
+			const file = event.dataTransfer?.files[0];
+			if (file) setSource(file);
+		});
+		input.addEventListener('change', () => {
+			const file = input.files?.[0];
+			if (file) setSource(file);
+		});
+		replace.addEventListener('click', () => input.click());
+
+		form.addEventListener('reset', () => {
+			window.setTimeout(() => {
+				minWidth.value = '320';
+				maxWidth.value = sourceWidth ? String(Math.min(sourceWidth, 1600)) : '1600';
+				step.value = '320';
+				quality.value = '82';
+				format.value = 'image/webp';
+				alt.value = '';
+				clearGenerated();
+				status.textContent = sourceFile
+					? labels.loaded
+					: labels.start;
+			}, 0);
+		});
+
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			if (!sourceFile) return;
+
+			clearGenerated();
+			generate.disabled = true;
+			status.textContent = labels.generating;
+
+			try {
+				const widths = buildWidths(
+					sourceWidth,
+					Number(minWidth.value) || 320,
+					Number(maxWidth.value) || sourceWidth,
+					Number(step.value) || 320,
+				);
+				const extension = format.value.split('/')[1].replace('jpeg', 'jpg');
+				const baseName = sourceFile.name.replace(/\.[^.]+$/, '') || 'image';
+				const outputQuality = format.value === 'image/png' ? undefined : (Number(quality.value) || 82) / 100;
+
+				for (const width of widths) {
+					const height = Math.max(1, Math.round(width * (sourceHeight / sourceWidth)));
+					const result = await processImage(sourceFile, {
+						width,
+						height,
+						format: format.value as 'image/jpeg' | 'image/png' | 'image/webp',
+						quality: outputQuality,
+					});
+					const url = URL.createObjectURL(result.blob);
+					generated.push({
+						width: result.width,
+						height: result.height,
+						blob: result.blob,
+						url,
+						name: `${baseName}-${result.width}w.${extension}`,
+					});
+					status.textContent = `Generated ${generated.length} of ${widths.length} breakpoints...`;
+				}
+
+				renderResults();
+				const totalSize = generated.reduce((sum, item) => sum + item.blob.size, 0);
+				status.textContent = `Finished. ${generated.length} files created, ${formatBytes(totalSize)} total.`;
+			} catch (error) {
+				status.textContent = error instanceof Error ? error.message : 'The browser could not generate breakpoints.';
+			} finally {
+				generate.disabled = false;
+			}
+		});
+
+		downloadAll.addEventListener('click', () => {
+			generated.forEach((item, index) => {
+				window.setTimeout(() => downloadItem(item), index * 180);
+			});
+		});
+
+		copySnippet.addEventListener('click', async () => {
+			try {
+				await navigator.clipboard.writeText(snippet.textContent || '');
+				copySnippet.textContent = labels.copied;
+			} catch {
+				copySnippet.textContent = labels.failed;
+			}
+			window.setTimeout(() => {
+				copySnippet.textContent = labels.copy;
+			}, 1400);
+		});
+	});
+</script>
+
+<style>
+	.breakpoint-tool {
+		display: grid;
+		grid-template-columns: minmax(0, 1.12fr) minmax(320px, 0.88fr);
+		gap: 1.25rem;
+		align-items: start;
+		margin: var(--space-5) 0 var(--space-7);
+	}
+
+	.tool-panel,
+	.settings-panel,
+	.results-panel {
+		border: 1px solid var(--line);
+		border-radius: var(--radius-lg);
+		background: rgba(255, 255, 255, 0.76);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.tool-panel {
+		overflow: hidden;
+		min-height: 520px;
+	}
+
+	.dropzone {
+		display: grid;
+		place-items: center;
+		align-content: center;
+		min-height: 520px;
+		padding: 2rem;
+		border: 1px dashed #a9c5f4;
+		border-radius: var(--radius-lg);
+		background:
+			linear-gradient(#e8eef8 1px, transparent 1px),
+			linear-gradient(90deg, #e8eef8 1px, transparent 1px),
+			#f8fbff;
+		background-size: 28px 28px;
+		text-align: center;
+		cursor: pointer;
+		transition:
+			border-color 0.18s ease,
+			transform 0.18s ease,
+			background-color 0.18s ease;
+	}
+
+	.dropzone:hover,
+	.dropzone.is-dragging {
+		border-color: var(--blue);
+		transform: translateY(-2px);
+	}
+
+	.dropzone[hidden],
+	.source-preview[hidden],
+	.results-panel[hidden] {
+		display: none !important;
+	}
+
+	.dropzone input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.drop-icon {
+		display: grid;
+		place-items: center;
+		width: 76px;
+		height: 76px;
+		margin-bottom: 1.2rem;
+		border-radius: 24px;
+		background: var(--blue);
+		color: #fff;
+		font-size: 2.3rem;
+		line-height: 1;
+		box-shadow: 0 18px 38px rgba(18, 105, 232, 0.28);
+	}
+
+	.dropzone h2 {
+		font-size: clamp(1.35rem, 2.5vw, 2rem);
+		letter-spacing: -0.035em;
+	}
+
+	.dropzone p,
+	.dropzone small {
+		color: var(--ink-soft);
+	}
+
+	.source-preview {
+		display: grid;
+		gap: 1rem;
+		padding: 1rem;
+	}
+
+	.preview-frame {
+		display: grid;
+		place-items: center;
+		min-height: 430px;
+		border-radius: 22px;
+		background:
+			linear-gradient(45deg, #e5ebf4 25%, transparent 25%),
+			linear-gradient(-45deg, #e5ebf4 25%, transparent 25%),
+			linear-gradient(45deg, transparent 75%, #e5ebf4 75%),
+			linear-gradient(-45deg, transparent 75%, #e5ebf4 75%),
+			#f8fbff;
+		background-position:
+			0 0,
+			0 12px,
+			12px -12px,
+			-12px 0;
+		background-size: 24px 24px;
+	}
+
+	.preview-frame img {
+		max-width: 100%;
+		max-height: 430px;
+		object-fit: contain;
+		border-radius: 14px;
+		box-shadow: 0 16px 36px rgba(23, 32, 53, 0.14);
+	}
+
+	.file-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: 0.8rem 1rem;
+		border: 1px solid var(--line);
+		border-radius: 16px;
+		background: #fff;
+	}
+
+	.file-row div {
+		display: grid;
+		min-width: 0;
+	}
+
+	.file-row strong,
+	.file-row span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.file-row span,
+	.settings-panel p,
+	.status {
+		color: var(--ink-soft);
+	}
+
+	.text-button {
+		border: 0;
+		background: transparent;
+		color: var(--blue);
+		font: inherit;
+		font-weight: 820;
+		cursor: pointer;
+	}
+
+	.settings-panel {
+		display: grid;
+		gap: 1.25rem;
+		padding: clamp(1.2rem, 3vw, 1.7rem);
+	}
+
+	.settings-panel h2,
+	.results-panel h2 {
+		font-size: clamp(1.6rem, 3vw, 2.25rem);
+		line-height: 1.1;
+		letter-spacing: -0.045em;
+	}
+
+	.control-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.9rem;
+	}
+
+	.control-grid label,
+	.field {
+		display: grid;
+		gap: 0.42rem;
+	}
+
+	.control-grid label {
+		position: relative;
+	}
+
+	.control-grid span,
+	.field span {
+		color: var(--ink-soft);
+		font-size: 0.78rem;
+		font-weight: 820;
+	}
+
+	.control-grid input,
+	.field input,
+	.field select {
+		width: 100%;
+		min-height: 52px;
+		padding: 0.8rem 2.55rem 0.8rem 0.9rem;
+		border: 1px solid var(--line);
+		border-radius: 14px;
+		background: #fff;
+		color: var(--ink);
+		font: inherit;
+		font-weight: 760;
+	}
+
+	.control-grid b {
+		position: absolute;
+		right: 0.9rem;
+		bottom: 0.82rem;
+		color: #98a4b7;
+		font-size: 0.78rem;
+	}
+
+	.actions,
+	.results-head,
+	.snippet-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+	}
+
+	.primary-button,
+	.secondary-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 48px;
+		padding: 0.85rem 1.1rem;
+		border-radius: 999px;
+		font: inherit;
+		font-weight: 850;
+		cursor: pointer;
+	}
+
+	.primary-button {
+		border: 0;
+		background: var(--blue);
+		color: #fff;
+		box-shadow: 0 18px 34px rgba(18, 105, 232, 0.24);
+	}
+
+	.primary-button:disabled {
+		background: #aeb9c9;
+		box-shadow: none;
+		cursor: not-allowed;
+	}
+
+	.secondary-button {
+		border: 1px solid var(--line);
+		background: #fff;
+		color: var(--ink);
+	}
+
+	.results-panel {
+		grid-column: 1 / -1;
+		display: grid;
+		gap: 1rem;
+		padding: clamp(1.2rem, 3vw, 1.7rem);
+	}
+
+	.breakpoint-list {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.8rem;
+	}
+
+	.breakpoint-list article {
+		display: grid;
+		grid-template-columns: 64px minmax(0, 1fr);
+		gap: 0.75rem;
+		align-items: center;
+		padding: 0.75rem;
+		border: 1px solid var(--line);
+		border-radius: 16px;
+		background: #fff;
+	}
+
+	.breakpoint-list img {
+		width: 64px;
+		height: 52px;
+		border-radius: 10px;
+		object-fit: cover;
+		background: #eef2f8;
+	}
+
+	.breakpoint-list div {
+		display: grid;
+		min-width: 0;
+	}
+
+	.breakpoint-list strong,
+	.breakpoint-list span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.breakpoint-list span {
+		color: var(--ink-soft);
+		font-size: 0.78rem;
+	}
+
+	.breakpoint-list button {
+		grid-column: 1 / -1;
+		padding: 0.55rem 0.75rem;
+		border: 1px solid #cfe0f8;
+		border-radius: 999px;
+		background: var(--blue-pale);
+		color: var(--blue-dark);
+		font: inherit;
+		font-size: 0.82rem;
+		font-weight: 850;
+		cursor: pointer;
+	}
+
+	.snippet-card {
+		overflow: hidden;
+		border: 1px solid #26324a;
+		border-radius: 18px;
+		background: #0f1728;
+	}
+
+	.snippet-head {
+		padding: 0.85rem 1rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.snippet-head h3 {
+		color: #fff;
+		font-size: 1rem;
+	}
+
+	.copy-button {
+		padding: 0.42rem 0.72rem;
+		border: 1px solid rgba(255, 255, 255, 0.18);
+		border-radius: 999px;
+		background: rgba(255, 255, 255, 0.1);
+		color: #f5f8ff;
+		font: inherit;
+		font-size: 0.78rem;
+		font-weight: 820;
+		cursor: pointer;
+	}
+
+	.snippet-card pre {
+		margin: 0;
+		padding: 1rem;
+		overflow-x: auto;
+		color: #dce7ff;
+		font-size: 0.9rem;
+		line-height: 1.6;
+	}
+
+	.snippet-card code {
+		font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+	}
+
+	@media (max-width: 960px) {
+		.breakpoint-tool {
+			grid-template-columns: 1fr;
+		}
+
+		.breakpoint-list {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 620px) {
+		.control-grid,
+		.breakpoint-list {
+			grid-template-columns: 1fr;
+		}
+
+		.actions,
+		.results-head,
+		.snippet-head,
+		.file-row {
+			align-items: stretch;
+			flex-direction: column;
+		}
+	}
+</style>

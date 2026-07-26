@@ -1,0 +1,146 @@
+---
+import BaseLayout from '../app/layouts/BaseLayout.astro';
+import BreakpointGenerator from '../widgets/breakpoint-generator/BreakpointGenerator.astro';
+
+const title = 'Image Breakpoint Generator | Responsive Image Tool';
+const description =
+	'Generate responsive image breakpoints, srcset markup, and multiple image sizes locally in your browser without uploading the source image.';
+---
+
+<BaseLayout {title} {description}>
+	<section class="intro breakpoint-intro">
+		<div>
+			<span class="eyebrow">Responsive image tool</span>
+			<h1>Image Breakpoint Generator</h1>
+		</div>
+		<p class="intro-copy">
+			<strong>Create responsive image sizes from one source file.</strong>
+			The Image Breakpoint Generator builds smaller image variants, keeps proportions intact,
+			and prepares a copy-ready srcset snippet for modern layouts.
+		</p>
+	</section>
+
+	<BreakpointGenerator />
+
+	<section class="section breakpoint-copy">
+		<div>
+			<span class="eyebrow">Why breakpoints matter</span>
+			<h2 class="section-title">Serve a fitting image instead of one oversized file</h2>
+		</div>
+		<div class="copy-columns">
+			<p>
+				A large desktop image can look sharp, but it is often wasteful on phones and narrow screens.
+				Responsive image breakpoints give the browser several width choices. The browser can then
+				select a file that better matches the current viewport and layout.
+			</p>
+			<p>
+				This Image Breakpoint Generator creates those variants locally. Choose the smallest width,
+				largest width, step size, quality, and output format. The generated files are downloaded
+				from your browser session, and the original image is not sent to an Image Resizer server.
+			</p>
+		</div>
+	</section>
+
+	<section class="section breakpoint-steps">
+		<div class="section-heading">
+			<div>
+				<span class="eyebrow">Workflow</span>
+				<h2 class="section-title">From source image to responsive markup</h2>
+			</div>
+		</div>
+		<ol>
+			<li>
+				<span>1</span>
+				<div>
+					<h3>Choose the source image</h3>
+					<p>Load a JPEG, PNG, or WebP file and check its original dimensions before generating files.</p>
+				</div>
+			</li>
+			<li>
+				<span>2</span>
+				<div>
+					<h3>Set the breakpoint range</h3>
+					<p>Enter the smallest width, largest width, and spacing between generated variants.</p>
+				</div>
+			</li>
+			<li>
+				<span>3</span>
+				<div>
+					<h3>Download files and copy srcset</h3>
+					<p>Save the generated images and copy the HTML snippet into your page or component.</p>
+				</div>
+			</li>
+		</ol>
+	</section>
+</BaseLayout>
+
+<style>
+	.breakpoint-intro {
+		margin-bottom: 0;
+	}
+
+	.breakpoint-copy {
+		display: grid;
+		grid-template-columns: 0.72fr 1.28fr;
+		gap: 4rem;
+		padding: 3rem;
+		border-radius: var(--radius-lg);
+		background: var(--ink);
+		color: #fff;
+	}
+
+	.breakpoint-copy .eyebrow {
+		color: var(--lime);
+	}
+
+	.copy-columns {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 2rem;
+	}
+
+	.copy-columns p {
+		color: #c6ccda;
+	}
+
+	.breakpoint-steps ol {
+		padding: 0;
+		border-top: 1px solid var(--line);
+		list-style: none;
+	}
+
+	.breakpoint-steps li {
+		display: grid;
+		grid-template-columns: 55px 1fr;
+		gap: 1rem;
+		padding: 1.35rem 0;
+		border-bottom: 1px solid var(--line);
+	}
+
+	.breakpoint-steps li > span {
+		color: var(--blue);
+		font-size: 0.8rem;
+		font-weight: 850;
+	}
+
+	.breakpoint-steps h3 {
+		font-size: 1.05rem;
+	}
+
+	.breakpoint-steps p {
+		max-width: 690px;
+		color: var(--ink-soft);
+	}
+
+	@media (max-width: 780px) {
+		.breakpoint-copy {
+			grid-template-columns: 1fr;
+			gap: 2rem;
+			padding: 1.6rem;
+		}
+
+		.copy-columns {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

@@ -1,12 +1,24 @@
 ---
 import '../styles/global.css';
 import Footer from '../../widgets/footer/Footer.astro';
+import {
+	defaultLocale,
+	getDictionary,
+	getLocaleFromPath,
+	localeDir,
+	localeLabels,
+	locales,
+	localizedPath,
+	stripLocaleFromPath,
+	type Locale,
+} from '../../shared/i18n';
 interface Props {
 	title?: string;
 	description?: string;
 	image?: string;
 	pageClass?: string;
 	noindex?: boolean;
+	locale?: Locale;
 }
 const {
 	title = 'Image Resizer and Compressor',
@@ -14,13 +26,17 @@ const {
 	image = '/icon-cropped.png',
 	pageClass = '',
 	noindex = false,
+	locale = getLocaleFromPath(Astro.url.pathname),
 } = Astro.props;
+const dictionary = getDictionary(locale);
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 const social = new URL(image, Astro.site ?? Astro.url);
+const cleanPath = stripLocaleFromPath(Astro.url.pathname);
+const path = (target: string) => localizedPath(locale, target);
 ---
 
 <!doctype html>
-<html lang='en'>
+<html lang={locale} dir={localeDir[locale]}>
 	<head>
 		<meta charset='utf-8' /><meta
 			name='viewport'
@@ -40,6 +56,18 @@ const social = new URL(image, Astro.site ?? Astro.url);
 		<link
 			rel='canonical'
 			href={canonical}
+		/>{
+			locales.map((item) => (
+				<link
+					rel='alternate'
+					hreflang={item}
+					href={new URL(localizedPath(item, cleanPath), Astro.site ?? Astro.url)}
+				/>
+			))
+		}<link
+			rel='alternate'
+			hreflang='x-default'
+			href={new URL(localizedPath(defaultLocale, cleanPath), Astro.site ?? Astro.url)}
 		/><link
 			rel='icon'
 			type='image/png'
@@ -84,7 +112,7 @@ const social = new URL(image, Astro.site ?? Astro.url);
 		<header class='site-header'>
 			<a
 				class='brand'
-				href='/'
+				href={path('/')}
 				><img
 					src='/icon-cropped.png'
 					alt=''
@@ -95,12 +123,22 @@ const social = new URL(image, Astro.site ?? Astro.url);
 			<nav
 				class='nav'
 				aria-label='Main navigation'
-				><a href='/tool/batch-resize/'>Batch resize</a><a href='/compress-image/'>Compress Image</a
-				><a href='/blog/'>Guides</a>{
-					pageClass === 'blog-page' && <a href='/blog/rss.xml'>RSS</a>
-				}</nav
+				><a href={path('/tool/batch-resize/')}>{dictionary.nav.batch}</a><a href={path('/compress-image/')}>{dictionary.nav.compress}</a
+				><a href={path('/image-breakpoint-generator/')}>{dictionary.nav.breakpoints}</a
+				><a href={path('/blog/')}>{dictionary.nav.guides}</a>{
+					pageClass === 'blog-page' && <a href='/blog/rss.xml'>{dictionary.nav.rss}</a>
+				}<details class='language-switcher'><summary>{localeLabels[locale]}</summary><div>{
+					locales.map((item) => (
+						<a
+							href={localizedPath(item, cleanPath)}
+							aria-current={item === locale ? 'page' : undefined}
+						>
+							{localeLabels[item]}
+						</a>
+					))
+				}</div></details></nav
 			>
 		</header>
-		<main id='main'><slot /></main><Footer />
+		<main id='main'><slot /></main><Footer locale={locale} />
 	</body>
 </html>
