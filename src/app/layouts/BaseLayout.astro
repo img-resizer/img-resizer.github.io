@@ -32,6 +32,9 @@ const dictionary = getDictionary(locale);
 const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
 const social = new URL(image, Astro.site ?? Astro.url);
 const cleanPath = stripLocaleFromPath(Astro.url.pathname);
+const isEnglishOnlyBlog =
+	cleanPath === '/blog' || cleanPath === '/blog/' || cleanPath.startsWith('/blog/');
+const alternateLocales = isEnglishOnlyBlog ? [defaultLocale] : locales;
 const path = (target: string) => localizedPath(locale, target);
 ---
 
@@ -57,7 +60,7 @@ const path = (target: string) => localizedPath(locale, target);
 			rel='canonical'
 			href={canonical}
 		/>{
-			locales.map((item) => (
+			alternateLocales.map((item) => (
 				<link
 					rel='alternate'
 					hreflang={item}
@@ -125,18 +128,22 @@ const path = (target: string) => localizedPath(locale, target);
 				aria-label='Main navigation'
 				><a href={path('/tool/batch-resize/')}>{dictionary.nav.batch}</a><a href={path('/compress-image/')}>{dictionary.nav.compress}</a
 				><a href={path('/image-breakpoint-generator/')}>{dictionary.nav.breakpoints}</a
-				><a href={path('/blog/')}>{dictionary.nav.guides}</a>{
-					pageClass === 'blog-page' && <a href='/blog/rss.xml'>{dictionary.nav.rss}</a>
-				}<details class='language-switcher'><summary>{localeLabels[locale]}</summary><div>{
-					locales.map((item) => (
-						<a
-							href={localizedPath(item, cleanPath)}
-							aria-current={item === locale ? 'page' : undefined}
-						>
-							{localeLabels[item]}
-						</a>
-					))
-				}</div></details></nav
+				><a href='/blog/'>{dictionary.nav.guides}</a>{
+					isEnglishOnlyBlog && <a href='/blog/rss.xml'>{dictionary.nav.rss}</a>
+				}{
+					!isEnglishOnlyBlog && (
+						<details class='language-switcher'><summary>{localeLabels[locale]}</summary><div>{
+							locales.map((item) => (
+								<a
+									href={localizedPath(item, cleanPath)}
+									aria-current={item === locale ? 'page' : undefined}
+								>
+									{localeLabels[item]}
+								</a>
+							))
+						}</div></details>
+					)
+				}</nav
 			>
 		</header>
 		<main id='main'><slot /></main><Footer locale={locale} />

@@ -1,5 +1,5 @@
 ---
 import { getCollection } from 'astro:content'; import BaseLayout from '../../../../app/layouts/BaseLayout.astro'; import PostGrid from '../../../../widgets/blog-preview/PostGrid.astro';
-export async function getStaticPaths(){const posts=await getCollection('blog');return [...new Set(posts.map(p=>p.data.category))].map(category=>({params:{category},props:{category,posts:posts.filter(p=>p.data.category===category)}}))} const {category,posts}=Astro.props;
+export async function getStaticPaths(){const posts=await getCollection('blog');return [...new Set(posts.map(p=>p.data.category))].map(category=>({params:{category},props:{category,posts:posts.filter(p=>p.data.category===category)}}))} const {category,posts}=Astro.props; const categoryLabel=category==='guides'?'Image resizing':category.charAt(0).toUpperCase()+category.slice(1);
 ---
-<BaseLayout title={`${category} image guides | Resizer`}><section class="intro"><h1>{category} guides</h1></section><PostGrid {posts}/></BaseLayout>
+<BaseLayout title={`${categoryLabel} image guides | Image Resizer`} description={`Browse ${categoryLabel.toLowerCase()} guides about image resizing, compression, formats, and private browser-based image processing.`}><section class="intro"><div><span class="eyebrow">Image guides</span><h1>{categoryLabel} guides</h1></div><p class="intro-copy">Articles filed under {categoryLabel.toLowerCase()}, with practical advice for working with images.</p></section><PostGrid {posts}/></BaseLayout>

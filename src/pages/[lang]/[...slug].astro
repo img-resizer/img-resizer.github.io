@@ -1,10 +1,8 @@
 ---
-import { getCollection } from 'astro:content';
 import BaseLayout from '../../app/layouts/BaseLayout.astro';
 import UploaderHero from '../../widgets/uploader-hero/UploaderHero.astro';
 import BreakpointGenerator from '../../widgets/breakpoint-generator/BreakpointGenerator.astro';
 import SeoLinksGrid from '../../widgets/seo-links-grid/SeoLinksGrid.astro';
-import PostGrid from '../../widgets/blog-preview/PostGrid.astro';
 import LegalPage from '../../widgets/legal-page/LegalPage.astro';
 import { getPreset, presets } from '../../entities/preset/model/presets';
 import type { Preset } from '../../entities/preset/model/types';
@@ -21,7 +19,6 @@ export function getStaticPaths() {
 		'compress-image',
 		'image-breakpoint-generator',
 		'plugins',
-		'blog',
 		'contact',
 		'privacy-policy',
 		'terms-of-use',
@@ -38,13 +35,11 @@ const locale: Locale = isLocale(rawLang) ? rawLang : 'en';
 const dictionary = getDictionary(locale);
 const page = dictionary.pages;
 const route = Astro.params.slug ?? '';
-const posts =
-	route === 'blog'
-		? (await getCollection('blog')).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-		: [];
-
 const toolSlug = route.startsWith('tool/') ? route.replace('tool/', '') : '';
 const selectedPreset = toolSlug ? getPreset(toolSlug) : undefined;
+const presetMetaDescription = selectedPreset
+	? `${selectedPreset.description} Preview, resize, and compress the image locally without uploading it.`
+	: '';
 const compressionPreset: Preset = {
 	slug: 'compress-image',
 	title: page.compressH1,
@@ -175,24 +170,6 @@ const compressionPreset: Preset = {
 }
 
 {
-	route === 'blog' && (
-		<BaseLayout title={page.blogTitle} description={page.blogDescription} pageClass="blog-page" locale={locale}>
-			<section class="blog-hero">
-				<div>
-					<span class="eyebrow">{page.blogEyebrow}</span>
-					<h1>{page.blogH1}</h1>
-				</div>
-				<div>
-					<p>{page.blogCopy}</p>
-					<a class="rss" href="/blog/rss.xml">{page.blogRss}</a>
-				</div>
-			</section>
-			<PostGrid posts={posts} />
-		</BaseLayout>
-	)
-}
-
-{
 	route === 'contact' && (
 		<LegalPage title={page.contactTitle} description={page.contactDescription} eyebrow={page.contactEyebrow} locale={locale}>
 			<span slot="heading">{page.contactH1}</span>
@@ -230,7 +207,7 @@ const compressionPreset: Preset = {
 
 {
 	selectedPreset && (
-		<BaseLayout title={`${selectedPreset.title} | Image Resizer`} description={selectedPreset.description} locale={locale}>
+		<BaseLayout title={`${selectedPreset.title} | Image Resizer`} description={presetMetaDescription} locale={locale}>
 			<UploaderHero preset={selectedPreset} locale={locale} />
 			<section class="intro">
 				<div>
